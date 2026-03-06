@@ -1,0 +1,31 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "material": {
+          "storePassword": "123456",
+          "keyAlias": "key0",
+          "keyPassword": "123456",
+          "profile": "./signing/default.p7b",
+          "certpath": "./signing/default.cer"
+        }
+      }
+    ],
+    "compileSdkVersion": 10,
+    "compatibleSdkVersion": 10
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": ["default"],
+          "runtimeOS": "OpenHarmony"
+        }
+      ]
+    }
+  ]
+}
