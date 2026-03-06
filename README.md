@@ -1,6 +1,6 @@
-# HarmonyOS OPC UA Tablet (Mock UI)
+# OpenHarmony OPC UA Tablet (NAPI + open62541)
 
-目标：HarmonyOS 4.1.1 平板端，OPC UA 读写工具 UI+逻辑骨架（模拟数据）。
+目标：OpenHarmony 4.1.1 平板端，OPC UA 读写工具 UI+逻辑骨架（NAPI + open62541 单文件）。
 
 ## 功能
 - 表单：IP / 端口 / 用户名 / 密码 / NodeId
@@ -14,15 +14,23 @@
 entry/src/main/ets/
   entryability/EntryAbility.ets
   pages/Index.ets
-  common/MockOpcUa.ts
   common/HistoryStore.ts
+
+entry/src/main/cpp/
+  CMakeLists.txt
+  napi_init.cpp
+  opcua_client.cpp
+  opcua_client.h
+  third_party/open62541/open62541.c
+  third_party/open62541/open62541.h
 ```
 
-## 下一步（接入真实 OPC UA）
-- 替换 `MockOpcUaClient` 为真实 OPC UA 客户端
-- 支持匿名/用户名密码
-- 增加连接状态管理与错误码提示
+## NAPI 接口
+- connect(ip, port, username, password) -> { ok, message }
+- read(nodeId) -> { ok, message, value }
+- write(nodeId, valueType, value) -> { ok, message }
 
 ## 说明
-当前为 UI/交互骨架，不依赖真实 OPC UA 服务端。
+- 已接入 open62541 单文件（v1.4）
+- 当前为 UI/交互骨架 + NAPI 框架，需在真实环境下联调服务端
 # harmony-opcua-tablet

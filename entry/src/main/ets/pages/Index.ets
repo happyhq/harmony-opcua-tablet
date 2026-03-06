@@ -1,5 +1,5 @@
 import { HistoryStore, HistoryItem, ValueType } from '../common/HistoryStore';
-import { MockOpcUaClient, OpcUaConfig } from '../common/MockOpcUa';
+import opcua from 'libopcua_napi.so';
 
 @Entry
 @Component
@@ -13,24 +13,13 @@ struct Index {
   @State writeValue: string = '';
   @State readValue: string = '';
   @State status: string = '未连接';
+  @State historyItems: HistoryItem[] = [];
 
   private history = new HistoryStore(200);
-  private client = new MockOpcUaClient();
 
   private addHistory(item: HistoryItem) {
     this.history.add(item);
-  }
-
-  private getCfg(): OpcUaConfig {
-    return {
-      ip: this.ip.trim(),
-      port: this.port.trim(),
-      username: this.username.trim(),
-      password: this.password,
-      nodeId: this.nodeId.trim(),
-      valueType: this.valueType,
-      writeValue: this.writeValue
-    };
+    this.historyItems = [...this.history.items];
   }
 
   private now() {
@@ -38,36 +27,32 @@ struct Index {
     return `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
   }
 
-  async onConnect() {
-    try {
-      const msg = await this.client.connect(this.getCfg());
-      this.status = msg;
-      this.addHistory({ time: this.now(), action: 'CONNECT', message: msg });
-    } catch (e) {
-      const msg = String(e?.message ?? e);
-      this.status = `连接失败：${msg}`;
-      this.addHistory({ time: this.now(), action: 'ERROR', message: this.status });
+  onConnect() {
+    const res = opcua.connect(this.ip.trim(), this.port.trim(), this.username.trim(), this.password);
+    this.status = res.message;
+    if (res.ok) {
+      this.addHistory({ time: this.now(), action: 'CONNECT', message: res.message });
+    } else {
+      this.addHistory({ time: this.now(), action: 'ERROR', message: `连接失败：${res.message}` });
     }
   }
 
-  async onRead() {
-    try {
-      const value = await this.client.read(this.getCfg());
-      this.readValue = value;
-      this.addHistory({ time: this.now(), action: 'READ', nodeId: this.nodeId, value, message: `读取: ${value}` });
-    } catch (e) {
-      const msg = String(e?.message ?? e);
-      this.addHistory({ time: this.now(), action: 'ERROR', message: `读取失败：${msg}` });
+  onRead() {
+    const res = opcua.read(this.nodeId.trim());
+    if (res.ok) {
+      this.readValue = res.value;
+      this.addHistory({ time: this.now(), action: 'READ', nodeId: this.nodeId, value: res.value, message: `读取: ${res.value}` });
+    } else {
+      this.addHistory({ time: this.now(), action: 'ERROR', message: `读取失败：${res.message}` });
     }
   }
 
-  async onWrite() {
-    try {
-      const msg = await this.client.write(this.getCfg());
-      this.addHistory({ time: this.now(), action: 'WRITE', nodeId: this.nodeId, value: this.writeValue, message: msg });
-    } catch (e) {
-      const msg = String(e?.message ?? e);
-      this.addHistory({ time: this.now(), action: 'ERROR', message: `写入失败：${msg}` });
+  onWrite() {
+    const res = opcua.write(this.nodeId.trim(), this.valueType, this.writeValue);
+    if (res.ok) {
+      this.addHistory({ time: this.now(), action: 'WRITE', nodeId: this.nodeId, value: this.writeValue, message: res.message });
+    } else {
+      this.addHistory({ time: this.now(), action: 'ERROR', message: `写入失败：${res.message}` });
     }
   }
 
@@ -154,11 +139,11 @@ struct Index {
       // History
       Row() {
         Text('历史记录').fontSize(18).fontWeight(FontWeight.Medium).layoutWeight(1);
-        Button('清空').onClick(() => this.history.clear());
+        Button('清空').onClick(() => { this.history.clear(); this.historyItems = []; });
       }.margin({ top: 16, bottom: 8 });
 
       List() {
-        ForEach(this.history.items, (item: HistoryItem) => {
+        ForEach(this.historyItems, (item: HistoryItem) => {
           ListItem() {
             Column() {
               Text(`${item.time}  ${item.action}`)
